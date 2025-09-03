@@ -1,0 +1,510 @@
+CREATE OR REPLACE PACKAGE batch_manager AUTHID DEFINER AS
+------------------------------------------------------------------------------
+-- Entry point: evaluate all files (except FAIL / PROCESSED) and submit eligible
+------------------------------------------------------------------------------
+PROCEDURE controller;
+
+------------------------------------------------------------------------------
+-- Helpers (exposed for diagnostics / unit testing)
+------------------------------------------------------------------------------
+FUNCTION check_global_controls(
+o_debug_enabled OUT VARCHAR2,
+o_max_parallel OUT NUMBER
+) RETURN BOOLEAN;
+
+FUNCTION check_theme_running(p_job_theme IN VARCHAR2) RETURN BOOLEAN;
+
+FUNCTION check_job_dependencies(p_job_sid IN NUMBER) RETURN BOOLEAN;
+
+FUNCTION group_window_open(p_group_sid IN NUMBER) RETURN BOOLEAN;
+
+PROCEDURE trigger_job(
+p_job_sid IN NUMBER,
+p_file_received_sid IN NUMBER
+);
+
+END batch_manager;
+/
+
+
+
+
+
+
+———
+CREATE OR REPLACE PACKAGE BODY batch_manager AS
+------------------------------------------------------------------------------
+-- Status constants
+------------------------------------------------------------------------------
+c_st_qued CONSTANT VARCHAR2(20) := 'QUED';
+c_st_processing CONSTANT VARCHAR2(20) := 'PROCESSING';
+c_st_processed CONSTANT VARCHAR2(20) := 'PROCESSED';
+c_st_fail CONSTANT VARCHAR2(20) := 'FAIL';
+c_st_disabled CONSTANT VARCHAR2(20) := 'DISABLED';
+
+------------------------------------------------------------------------------
+-- Run modes
+------------------------------------------------------------------------------
+c_rm_auto CONSTANT VARCHAR2(10) := 'AUTO';
+c_rm_manu CONSTANT VARCHAR2(10) := 'MANU';
+c_rm_rpro CONSTANT VARCHAR2(10) := 'RPRO';
+
+------------------------------------------------------------------------------
+-- Internal: running jobs count (defensive fail-closed on error)
+------------------------------------------------------------------------------
+FUNCTION running_job_count RETURN NUMBER IS
+l_cnt NUMBER;
+BEGIN
+SELECT COUNT(*) INTO l_cnt FROM dba_scheduler_running_jobs;
+RETURN l_cnt;
+EXCEPTION WHEN OTHERS THEN
+RETURN 999999;
+END running_job_count;
+
+------------------------------------------------------------------------------
+-- Global controls:
+-- - batch_global_config.scheduler_enabled must be 'Y'
+-- - running job count < max_parallel_jobs
+------------------------------------------------------------------------------
+FUNCTION check_global_controls(
+o_debug_enabled OUT VARCHAR2,
+o_max_parallel OUT NUMBER
+) RETURN BOOLEAN IS
+l_sched_enabled VARCHAR2(1);
+l_debug VARCHAR2(1);
+l_maxpar NUMBER;
+BEGIN
+SELECT NVL(scheduler_enabled,'N'),
+NVL(debug_enabled,'N'),
+NVL(max_parallel_jobs,0)
+INTO l_sched_enabled, l_debug, l_maxpar
+FROM batch_global_config
+WHERE ROWNUM = 1;
+
+o_debug_enabled := l_debug;
+o_max_parallel := l_maxpar;
+
+IF l_sched_enabled <> 'Y' THEN
+RETURN FALSE;
+END IF;
+
+IF running_job_count >= l_maxpar THEN
+RETURN FALSE;
+END IF;
+
+RETURN TRUE;
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+o_debug_enabled := 'N'; o_max_parallel := 0; RETURN FALSE;
+WHEN OTHERS THEN
+o_debug_enabled := 'N'; o_max_parallel := 0; RETURN FALSE;
+END check_global_controls;
+
+------------------------------------------------------------------------------
+-- Theme exclusivity: TRUE if no running job with the same theme is active
+------------------------------------------------------------------------------
+FUNCTION check_theme_running(p_job_theme IN VARCHAR2) RETURN BOOLEAN IS
+l_cnt NUMBER;
+BEGIN
+SELECT COUNT(*)
+INTO l_cnt
+FROM dba_scheduler_running_jobs r
+JOIN batch_job_setup j
+ON UPPER(r.job_name) = UPPER(j.oracle_scheduler_job)
+WHERE UPPER(NVL(j.job_theme,'~')) = UPPER(NVL(p_job_theme,'~'));
+RETURN l_cnt = 0;
+EXCEPTION WHEN OTHERS THEN
+RETURN FALSE; -- conservative
+END check_theme_running;
+
+------------------------------------------------------------------------------
+-- Group execution window (AUTO only):
+-- Treat schedule_window_cron as a calendar; window = (last_fire, next_fire].
+------------------------------------------------------------------------------
+FUNCTION group_window_open(p_group_sid IN NUMBER) RETURN BOOLEAN IS
+l_cron VARCHAR2(4000);
+l_next_now TIMESTAMP;
+l_next_minus1 TIMESTAMP;
+l_last_fire TIMESTAMP;
+BEGIN
+SELECT schedule_window_cron
+INTO l_cron
+FROM batch_group_setup
+WHERE batch_group_sid = p_group_sid;
+
+IF l_cron IS NULL THEN
+RETURN TRUE; -- no cron => always open
+END IF;
+
+DBMS_SCHEDULER.EVALUATE_CALENDAR_STRING(
+calendar_string => l_cron,
+start_date => SYSTIMESTAMP,
+return_date_after => SYSTIMESTAMP,
+next_run_date => l_next_now
+);
+
+DBMS_SCHEDULER.EVALUATE_CALENDAR_STRING(
+calendar_string => l_cron,
+start_date => SYSTIMESTAMP - INTERVAL '1' DAY,
+return_date_after => SYSTIMESTAMP - INTERVAL '1' DAY,
+next_run_date => l_next_minus1
+);
+
+IF l_next_minus1 <= SYSTIMESTAMP THEN
+l_last_fire := l_next_minus1;
+ELSE
+RETURN TRUE; -- fail-open
+END IF;
+
+RETURN (SYSTIMESTAMP > l_last_fire) AND (SYSTIMESTAMP <= l_next_now);
+EXCEPTION
+WHEN OTHERS THEN
+RETURN TRUE; -- fail-open on window parsing issues
+END group_window_open;
+
+------------------------------------------------------------------------------
+-- Dependency logic for AUTO runs:
+-- For every earlier-sequence job in the same group:
+-- * If files exist: ALL must be PROCESSED; DISABLED does not block; FAIL blocks.
+-- * If no files exist:
+-- - cutoff not reached => unmet
+-- - cutoff passed => treat as met (we also log SKIPPED elsewhere)
+------------------------------------------------------------------------------
+FUNCTION check_job_dependencies(p_job_sid IN NUMBER) RETURN BOOLEAN IS
+l_group NUMBER;
+l_seq NUMBER;
+l_unmet NUMBER;
+BEGIN
+SELECT batch_group_sid, group_sequence
+INTO l_group, l_seq
+FROM batch_job_setup
+WHERE job_sid = p_job_sid;
+
+SELECT COUNT(*)
+INTO l_unmet
+FROM batch_job_setup j
+WHERE j.batch_group_sid = l_group
+AND j.group_sequence < l_seq
+AND (
+-- A) earlier job has files that are not yet PROCESSED (DISABLED is allowed)
+EXISTS (
+SELECT 1
+FROM batch_file_received f
+WHERE UPPER(f.job_name) = UPPER(j.job_name)
+AND f.status NOT IN ('PROCESSED','DISABLED')
+)
+OR
+-- B) earlier job has no files AND cutoff not yet reached
+( NOT EXISTS (
+SELECT 1
+FROM batch_file_received f
+WHERE UPPER(f.job_name) = UPPER(j.job_name)
+)
+AND SYSDATE < NVL(j.file_cutofftime_time, SYSDATE)
+)
+);
+
+RETURN l_unmet = 0;
+EXCEPTION WHEN OTHERS THEN
+RETURN FALSE; -- conservative (block)
+END check_job_dependencies;
+
+------------------------------------------------------------------------------
+-- Internal: one-time audit for "skipped due to cutoff & no files"
+------------------------------------------------------------------------------
+PROCEDURE log_skipped_if_needed(p_job_sid IN NUMBER) IS
+l_group NUMBER;
+l_cnt NUMBER;
+l_jobname VARCHAR2(200);
+BEGIN
+SELECT batch_group_sid, job_name INTO l_group, l_jobname
+FROM batch_job_setup WHERE job_sid = p_job_sid;
+
+SELECT COUNT(*) INTO l_cnt
+FROM batch_run_log
+WHERE job_id = p_job_sid
+AND status = 'SKIPPED'
+AND start_time >= TRUNC(SYSDATE);
+
+IF l_cnt = 0 THEN
+INSERT INTO batch_run_log(job_id, group_id, run_id, start_time, end_time, status, message)
+VALUES (p_job_sid, l_group, NULL, SYSDATE, SYSDATE, 'SKIPPED',
+'No files received by cutoff for job '||l_jobname||' (auto-satisfied dependency)');
+COMMIT;
+END IF;
+EXCEPTION WHEN OTHERS THEN NULL;
+END log_skipped_if_needed;
+
+------------------------------------------------------------------------------
+-- Submit job asynchronously and mark PROCESSING; concurrency-safe
+------------------------------------------------------------------------------
+PROCEDURE trigger_job(
+p_job_sid IN NUMBER,
+p_file_received_sid IN NUMBER
+) IS
+l_sched_job batch_job_setup.oracle_scheduler_job%TYPE;
+l_group_id NUMBER;
+l_curr_status batch_file_received.status%TYPE;
+BEGIN
+-- Resolve job & group
+SELECT oracle_scheduler_job, batch_group_sid
+INTO l_sched_job, l_group_id
+FROM batch_job_setup
+WHERE job_sid = p_job_sid;
+
+-- Lock row and verify it is still QUED
+SELECT status
+INTO l_curr_status
+FROM batch_file_received
+WHERE file_received_sid = p_file_received_sid
+FOR UPDATE;
+
+IF l_curr_status <> c_st_qued THEN
+RETURN;
+END IF;
+
+-- Submit
+DBMS_SCHEDULER.RUN_JOB(l_sched_job, use_current_session => FALSE);
+
+-- Update file status and log
+UPDATE batch_file_received
+SET status = c_st_processing,
+comment = 'Submitted '||l_sched_job||' at '||TO_CHAR(SYSDATE,'YYYY-MM-DD HH24:MI:SS')
+WHERE file_received_sid = p_file_received_sid;
+
+INSERT INTO batch_run_log (job_id, group_id, run_id, start_time, status, message)
+VALUES (p_job_sid, l_group_id, p_file_received_sid, SYSDATE, c_st_processing,
+'Job submitted via controller');
+
+COMMIT;
+EXCEPTION
+WHEN OTHERS THEN
+BEGIN
+UPDATE batch_file_received
+SET status = c_st_fail,
+comment = SUBSTR('Submission error: '||SQLERRM,1,1000)
+WHERE file_received_sid = p_file_received_sid;
+
+INSERT INTO batch_run_log (job_id, group_id, run_id, start_time, end_time, status, message)
+VALUES (p_job_sid, l_group_id, p_file_received_sid, SYSDATE, SYSDATE, c_st_fail,
+SUBSTR('trigger_job error: '||SQLERRM,1,4000));
+COMMIT;
+EXCEPTION WHEN OTHERS THEN NULL; END;
+END trigger_job;
+
+------------------------------------------------------------------------------
+-- CONTROLLER
+-- Evaluates ALL files except FAIL/PROCESSED each pass.
+-- Keeps status QUED when waiting; writes descriptive comments (theme / deps).
+-- AUTO: enforces window, enable flags, cutoff (pre & post), dependencies, theme.
+-- MANU/RPRO: only global + theme.
+------------------------------------------------------------------------------
+PROCEDURE controller IS
+CURSOR c_files IS
+SELECT f.file_received_sid,
+f.job_name,
+f.run_mode,
+f.status,
+f.received_date
+FROM batch_file_received f
+WHERE f.status NOT IN (c_st_fail, c_st_processed)
+ORDER BY f.received_date, f.file_received_sid
+FOR UPDATE SKIP LOCKED;
+
+l_debug VARCHAR2(1);
+l_maxpar NUMBER;
+BEGIN
+FOR r IN c_files LOOP
+BEGIN
+DECLARE
+l_job_sid NUMBER;
+l_group_sid NUMBER;
+l_grp_en NUMBER;
+l_job_en NUMBER;
+l_theme VARCHAR2(200);
+l_cutoff DATE;
+l_sched_job VARCHAR2(200);
+l_global_ok BOOLEAN;
+l_blockers VARCHAR2(1000);
+BEGIN
+-- Resolve job metadata
+SELECT j.job_sid,
+j.batch_group_sid,
+g.enable_ind,
+j.enable_ind,
+j.job_theme,
+j.file_cutofftime_time,
+j.oracle_scheduler_job
+INTO l_job_sid, l_group_sid, l_grp_en, l_job_en, l_theme, l_cutoff, l_sched_job
+FROM batch_job_setup j
+JOIN batch_group_setup g ON g.batch_group_sid = j.batch_group_sid
+WHERE UPPER(j.job_name) = UPPER(r.job_name);
+
+-- Global controls (always)
+l_global_ok := check_global_controls(l_debug, l_maxpar);
+IF NOT l_global_ok THEN
+UPDATE batch_file_received
+SET comment = 'Waiting: scheduler disabled or parallel limit reached'
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- If currently PROCESSING, leave it alone
+IF r.status = c_st_processing THEN
+ROLLBACK; -- release lock
+CONTINUE;
+END IF;
+
+-- MANU / RPRO: only theme exclusivity (global already checked)
+IF r.run_mode IN (c_rm_manu, c_rm_rpro) THEN
+IF NOT check_theme_running(l_theme) THEN
+UPDATE batch_file_received
+SET status = c_st_qued,
+comment = 'Waiting for theme '||NVL(l_theme,'(null)')||' to free'
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+trigger_job(l_job_sid, r.file_received_sid);
+ROLLBACK;
+CONTINUE;
+END IF;
+
+-- === AUTO mode below ===
+
+-- Group enabled?
+IF l_grp_en = 0 THEN
+UPDATE batch_file_received
+SET status = c_st_disabled,
+comment = 'Group disabled'
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Group window open?
+IF NOT group_window_open(l_group_sid) THEN
+UPDATE batch_file_received
+SET status = c_st_qued,
+comment = 'Waiting for group window'
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Job enabled?
+IF l_job_en = 0 THEN
+UPDATE batch_file_received
+SET status = c_st_disabled,
+comment = 'Job disabled'
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Cutoff rule #1 (PRE): do not start before cutoff
+IF SYSDATE < NVL(l_cutoff, SYSDATE) THEN
+UPDATE batch_file_received
+SET status = c_st_qued,
+comment = 'Waiting until cutoff '||TO_CHAR(l_cutoff,'YYYY-MM-DD HH24:MI:SS')
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Cutoff rule #2 (POST): if file ARRIVED after cutoff, never trigger (mark DISABLED)
+IF l_cutoff IS NOT NULL AND r.received_date > l_cutoff THEN
+UPDATE batch_file_received
+SET status = c_st_disabled,
+comment = 'Missed cutoff '||TO_CHAR(l_cutoff,'YYYY-MM-DD HH24:MI:SS')||
+', received at '||TO_CHAR(r.received_date,'YYYY-MM-DD HH24:MI:SS')
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Theme exclusivity
+IF NOT check_theme_running(l_theme) THEN
+UPDATE batch_file_received
+SET status = c_st_qued,
+comment = 'Waiting for theme '||NVL(l_theme,'(null)')||' to free'
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Dependencies: all files for earlier jobs processed, or no files & cutoff passed
+IF NOT check_job_dependencies(l_job_sid) THEN
+-- Build a human-readable list of blocking jobs
+SELECT LISTAGG(b.job_name, ', ') WITHIN GROUP (ORDER BY b.job_name)
+INTO l_blockers
+FROM (
+SELECT j2.job_name
+FROM batch_job_setup j2
+WHERE j2.batch_group_sid = l_group_sid
+AND j2.group_sequence <
+(SELECT group_sequence FROM batch_job_setup WHERE job_sid = l_job_sid)
+AND (
+EXISTS (SELECT 1 FROM batch_file_received f
+WHERE UPPER(f.job_name) = UPPER(j2.job_name)
+AND f.status NOT IN ('PROCESSED','DISABLED'))
+OR ( NOT EXISTS (SELECT 1 FROM batch_file_received f
+WHERE UPPER(f.job_name) = UPPER(j2.job_name))
+AND SYSDATE < NVL(j2.file_cutofftime_time, SYSDATE)
+)
+)
+) b;
+
+-- If some earlier jobs had no files and cutoff passed, log SKIPPED once
+FOR d IN (
+SELECT j2.job_sid
+FROM batch_job_setup j2
+WHERE j2.batch_group_sid = l_group_sid
+AND j2.group_sequence <
+(SELECT group_sequence FROM batch_job_setup WHERE job_sid = l_job_sid)
+AND NOT EXISTS (SELECT 1 FROM batch_file_received f
+WHERE UPPER(f.job_name) = UPPER(j2.job_name))
+AND SYSDATE >= NVL(j2.file_cutofftime_time, SYSDATE)
+) LOOP
+log_skipped_if_needed(d.job_sid);
+END LOOP;
+
+UPDATE batch_file_received
+SET status = c_st_qued,
+comment = 'Waiting for dependency: '||NVL(l_blockers,'(earlier sequence)')
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+CONTINUE;
+END IF;
+
+-- Eligible → submit
+trigger_job(l_job_sid, r.file_received_sid);
+ROLLBACK; -- release lock (trigger_job commits)
+
+EXCEPTION
+WHEN NO_DATA_FOUND THEN
+UPDATE batch_file_received
+SET status = c_st_fail,
+comment = 'Job not found in setup for name: '||r.job_name
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+WHEN OTHERS THEN
+UPDATE batch_file_received
+SET status = c_st_fail,
+comment = SUBSTR('Controller error: '||SQLERRM,1,1000)
+WHERE file_received_sid = r.file_received_sid;
+COMMIT;
+END;
+END LOOP;
+EXCEPTION
+WHEN OTHERS THEN
+-- Top-level safety net
+INSERT INTO batch_run_log(job_id, group_id, run_id, start_time, end_time, status, message)
+VALUES (NULL, NULL, NULL, SYSDATE, SYSDATE, c_st_fail,
+SUBSTR('controller fatal: '||SQLERRM,1,4000));
+COMMIT;
+END controller;
+
+END batch_manager;
+/
