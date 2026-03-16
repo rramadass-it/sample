@@ -1,0 +1,369 @@
+Below is a much simpler Angular chat implementation (still production-friendly) that supports:
+
+✅ Open chat button
+✅ Minimize / maximize / close
+✅ Send message
+✅ File upload
+✅ Model selection
+✅ Chat history (sessions)
+✅ Settings panel
+✅ Colored chat bubbles
+✅ Simple REST API calls
+
+This version uses only 2 components + 1 service, making it very easy to integrate into an existing Angular 19 enterprise application.
+
+1. Folder Structure (Simple)
+src/app/chat/
+   chat.component.ts
+   chat.component.html
+   chat.component.scss
+   chat.service.ts
+2. Chat Service (REST Calls)
+chat.service.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ChatService {
+
+  private API = "/api/chat";
+
+  constructor(private http: HttpClient) {}
+
+  sendMessage(sessionId: string, message: string, model: string): Observable<any> {
+    return this.http.post(`${this.API}/send`, {
+      sessionId,
+      message,
+      model
+    });
+  }
+
+  getSessions(): Observable<any> {
+    return this.http.get(`${this.API}/sessions`);
+  }
+
+  createSession(): Observable<any> {
+    return this.http.post(`${this.API}/session`, {});
+  }
+
+  uploadFile(file: File): Observable<any> {
+    const form = new FormData();
+    form.append("file", file);
+    return this.http.post(`${this.API}/upload`, form);
+  }
+
+}
+3. Chat Component Logic
+chat.component.ts
+import { Component, OnInit } from '@angular/core';
+import { ChatService } from './chat.service';
+
+@Component({
+  selector: 'app-chat',
+  templateUrl: './chat.component.html',
+  styleUrls: ['./chat.component.scss']
+})
+export class ChatComponent implements OnInit {
+
+  isOpen = false;
+  minimized = false;
+  showSettings = false;
+
+  messageText = "";
+  selectedModel = "gpt-4";
+
+  messages:any[] = [];
+  sessions:any[] = [];
+  currentSession:any;
+
+  models = ["gpt-4","gpt-4o","gpt-3.5"];
+
+  constructor(private chatService:ChatService){}
+
+  ngOnInit(){
+    this.loadSessions();
+  }
+
+  openChat(){
+    this.isOpen = true;
+  }
+
+  closeChat(){
+    this.isOpen = false;
+  }
+
+  minimize(){
+    this.minimized = !this.minimized;
+  }
+
+  loadSessions(){
+    this.chatService.getSessions().subscribe(res=>{
+      this.sessions = res || [];
+    });
+  }
+
+  newSession(){
+    this.chatService.createSession().subscribe(res=>{
+      this.currentSession = res;
+      this.messages = [];
+      this.sessions.unshift(res);
+    });
+  }
+
+  selectSession(session:any){
+    this.currentSession = session;
+    this.messages = session.messages || [];
+  }
+
+  send(){
+
+    if(!this.messageText.trim()) return;
+
+    const userMsg = {
+      role:'user',
+      content:this.messageText
+    };
+
+    this.messages.push(userMsg);
+
+    this.chatService
+      .sendMessage(this.currentSession?.id,this.messageText,this.selectedModel)
+      .subscribe(res=>{
+        this.messages.push(res);
+      });
+
+    this.messageText="";
+  }
+
+  upload(event:any){
+    const file = event.target.files[0];
+    this.chatService.uploadFile(file).subscribe();
+  }
+
+}
+4. Chat Interface
+chat.component.html
+<!-- Chat Open Button -->
+<button class="chat-open-btn" (click)="openChat()">💬 Chat</button>
+
+
+<!-- Chat Window -->
+<div class="chat-window" *ngIf="isOpen">
+
+  <!-- HEADER -->
+  <div class="chat-header">
+
+    <span>AI Assistant</span>
+
+    <select [(ngModel)]="selectedModel">
+      <option *ngFor="let m of models">{{m}}</option>
+    </select>
+
+    <div>
+
+      <button (click)="showSettings=!showSettings">⚙</button>
+      <button (click)="minimize()">—</button>
+      <button (click)="closeChat()">✕</button>
+
+    </div>
+
+  </div>
+
+
+  <!-- SETTINGS -->
+  <div class="settings" *ngIf="showSettings">
+
+    <h4>Settings</h4>
+
+    <label>
+      Default Model
+      <select [(ngModel)]="selectedModel">
+        <option *ngFor="let m of models">{{m}}</option>
+      </select>
+    </label>
+
+  </div>
+
+
+  <div class="chat-body" *ngIf="!minimized">
+
+    <!-- HISTORY -->
+    <div class="history">
+
+      <button (click)="newSession()">+ New Chat</button>
+
+      <div
+        class="session"
+        *ngFor="let s of sessions"
+        (click)="selectSession(s)"
+      >
+        {{s.title || 'Chat'}}
+      </div>
+
+    </div>
+
+
+    <!-- MESSAGES -->
+    <div class="messages">
+
+      <div
+        *ngFor="let msg of messages"
+        class="message"
+        [ngClass]="msg.role"
+      >
+
+        {{msg.content}}
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- FOOTER -->
+  <div class="chat-footer" *ngIf="!minimized">
+
+    <input
+      type="text"
+      placeholder="Type message..."
+      [(ngModel)]="messageText"
+      (keydown.enter)="send()"
+    />
+
+    <input type="file" (change)="upload($event)"/>
+
+    <button (click)="send()">Send</button>
+
+  </div>
+
+</div>
+5. Chat Styling
+chat.component.scss
+.chat-open-btn{
+ position:fixed;
+ bottom:20px;
+ right:20px;
+ background:#4f46e5;
+ color:white;
+ border:none;
+ padding:12px 18px;
+ border-radius:30px;
+ cursor:pointer;
+}
+
+.chat-window{
+ position:fixed;
+ bottom:80px;
+ right:20px;
+ width:420px;
+ height:550px;
+ background:white;
+ border-radius:10px;
+ box-shadow:0 8px 25px rgba(0,0,0,0.2);
+ display:flex;
+ flex-direction:column;
+}
+
+.chat-header{
+ background:#4f46e5;
+ color:white;
+ padding:10px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+}
+
+.chat-body{
+ flex:1;
+ display:flex;
+ overflow:hidden;
+}
+
+.history{
+ width:120px;
+ border-right:1px solid #eee;
+ padding:6px;
+}
+
+.session{
+ cursor:pointer;
+ padding:6px;
+ font-size:13px;
+}
+
+.messages{
+ flex:1;
+ padding:10px;
+ overflow-y:auto;
+}
+
+.message{
+ padding:10px;
+ margin-bottom:8px;
+ border-radius:10px;
+ max-width:70%;
+}
+
+.message.user{
+ background:#4f46e5;
+ color:white;
+ margin-left:auto;
+}
+
+.message.assistant{
+ background:#e5e7eb;
+}
+
+.chat-footer{
+ display:flex;
+ gap:6px;
+ padding:10px;
+ border-top:1px solid #eee;
+}
+
+.settings{
+ padding:10px;
+ background:#f9fafb;
+ border-bottom:1px solid #eee;
+}
+6. Add Chat to App
+app.component.html
+<app-chat></app-chat>
+Features You Now Have
+
+✔ Floating chat button
+✔ Open / Close
+✔ Minimize
+✔ Chat history
+✔ New chat sessions
+✔ Model selection
+✔ File upload
+✔ Settings panel
+✔ User vs AI color messages
+✔ REST API integration
+
+Backend Endpoints Expected
+POST /api/chat/send
+POST /api/chat/session
+GET  /api/chat/sessions
+POST /api/chat/upload
+
+💡 If you want, I can also give a very polished ChatGPT-like UI (still simple but MUCH nicer) that includes:
+
+streaming responses
+
+markdown + code blocks
+
+auto scroll
+
+typing animation
+
+drag & resize chat window
+
+responsive mobile UI
+
+It looks almost identical to ChatGPT but only ~300 lines of Angular code.
