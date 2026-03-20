@@ -1,0 +1,263 @@
+🚀 1. AUTO TOOL DISCOVERY (No Hardcoding)
+🧩 MCP should expose tool metadata
+
+Example endpoint:
+
+GET /tools
+
+Response:
+
+[
+  {
+    "name": "jira-search",
+    "description": "Search Jira tickets",
+    "path": "/tools/jira/search",
+    "inputSchema": {
+      "query": "string"
+    }
+  },
+  {
+    "name": "confluence-search",
+    "description": "Search Confluence pages",
+    "path": "/tools/confluence/search"
+  }
+]
+🔧 ToolDefinition.java
+public record ToolDefinition(
+        String name,
+        String description,
+        String path
+) {}
+🔥 DynamicToolRegistry.java
+@Component
+public class DynamicToolRegistry {
+
+    private final RestTemplate restTemplate;
+
+    @Value("${mcp.base-url}")
+    private String baseUrl;
+
+    private Map<String, ToolDefinition> tools = new ConcurrentHashMap<>();
+
+    public DynamicToolRegistry(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    @PostConstruct
+    public void loadTools() {
+
+        ResponseEntity<ToolDefinition[]> response =
+                restTemplate.getForEntity(
+                        baseUrl + "/tools",
+                        ToolDefinition[].class
+                );
+
+        if (response.getBody() != null) {
+            for (ToolDefinition tool : response.getBody()) {
+                tools.put(tool.name(), tool);
+            }
+        }
+    }
+
+    public ToolDefinition get(String name) {
+        return tools.get(name);
+    }
+
+    public Collection<ToolDefinition> getAll() {
+        return tools.values();
+    }
+}
+🧠 2. TOOL RANKING (Smart Selection)
+
+👉 Instead of blindly letting LLM pick, we guide it.
+
+Strategy
+
+Embed tool descriptions
+
+Compare with user query
+
+Send top tools to LLM
+
+Simple Ranking (Production-friendly)
+public List<ToolDefinition> rankTools(String query) {
+
+    return tools.values().stream()
+            .sorted((t1, t2) ->
+                    score(query, t2.description()) -
+                    score(query, t1.description())
+            )
+            .limit(5)
+            .toList();
+}
+
+private int score(String query, String desc) {
+    return Arrays.stream(query.split(" "))
+            .mapToInt(word -> desc.toLowerCase().contains(word.toLowerCase()) ? 1 : 0)
+            .sum();
+}
+🔥 Better (Later Upgrade)
+
+Use embeddings:
+
+query embedding vs tool embedding → cosine similarity
+⚡ 3. TOOL EXECUTOR (MCP)
+@Component
+public class ToolExecutor {
+
+    private final McpToolClient client;
+
+    public ToolExecutor(McpToolClient client) {
+        this.client = client;
+    }
+
+    public String execute(ToolDefinition tool, Map<String, Object> input) {
+        return client.callTool(tool.path(), input);
+    }
+}
+🧠 4. AGENT LOOP (MULTI-STEP REASONING 🔥)
+
+👉 This is the MOST IMPORTANT PART
+
+AgentService.java
+@Service
+public class AgentService {
+
+    private final ChatClient chatClient;
+    private final DynamicToolRegistry registry;
+    private final ToolExecutor executor;
+
+    public AgentService(ChatClient.Builder builder,
+                        CustomMcpChatModel model,
+                        DynamicToolRegistry registry,
+                        ToolExecutor executor) {
+
+        this.chatClient = builder.chatModel(model).build();
+        this.registry = registry;
+        this.executor = executor;
+    }
+
+    public String runAgent(String sessionId, String userInput) {
+
+        String context = userInput;
+
+        for (int step = 0; step < 5; step++) {
+
+            // 🔥 Get top tools
+            List<ToolDefinition> topTools = rankTools(context);
+
+            // Ask LLM what to do next
+            String decision = chatClient.prompt()
+                    .system(buildSystemPrompt(topTools))
+                    .user(context)
+                    .call()
+                    .content();
+
+            if (decision.contains("FINAL_ANSWER")) {
+                return decision;
+            }
+
+            // Parse tool call (simple format)
+            String toolName = extractToolName(decision);
+            String query = extractQuery(decision);
+
+            ToolDefinition tool = registry.get(toolName);
+
+            String result = executor.execute(tool, Map.of("query", query));
+
+            logToolUsage(toolName, query);
+
+            // Feed result back
+            context = "Tool result: " + result;
+        }
+
+        return "Unable to complete request";
+    }
+}
+🧠 5. SYSTEM PROMPT (CRITICAL)
+private String buildSystemPrompt(List<ToolDefinition> tools) {
+
+    String toolList = tools.stream()
+            .map(t -> t.name() + ": " + t.description())
+            .collect(Collectors.joining("\n"));
+
+    return """
+You are an AI agent.
+
+You can use tools:
+
+%s
+
+Rules:
+- If tool needed → respond:
+  TOOL: tool-name | INPUT: query
+- If final answer → respond:
+  FINAL_ANSWER: your answer
+""".formatted(toolList);
+}
+🔍 6. TOOL USAGE LOGGING
+ToolLogService.java
+@Component
+public class ToolLogService {
+
+    public void log(String tool, String input) {
+        System.out.println("TOOL USED: " + tool + " INPUT: " + input);
+    }
+}
+Better (Production)
+
+Store in DB:
+
+@Entity
+class ToolUsage {
+    String toolName;
+    String input;
+    LocalDateTime time;
+}
+⚡ 7. TOOL CHAINING EXAMPLE
+
+User asks:
+
+"Find Jira ticket for login issue and get details"
+Agent Loop:
+Step 1 → searchJira("login issue")
+Step 2 → getTicketDetails("JIRA-123")
+Step 3 → FINAL_ANSWER
+🚀 8. CONTROLLER
+@PostMapping("/agent")
+public Map<String, String> chat(@RequestBody Map<String, String> req) {
+
+    String response = agentService.runAgent(
+            req.get("sessionId"),
+            req.get("message")
+    );
+
+    return Map.of("response", response);
+}
+🔥 WHAT YOU JUST BUILT
+
+You now have:
+
+✔ Auto tool discovery (no hardcoding)
+✔ Tool ranking (smart filtering)
+✔ Tool chaining (multi-step AI reasoning)
+✔ MCP integration
+✔ Logging & observability
+✔ Spring AI integration
+
+⚠️ REAL-WORLD NOTES
+🔴 1. Parsing LLM output
+
+Use structured JSON instead of string parsing (recommended later)
+
+🔴 2. Add retry logic
+
+LLM may hallucinate tool names
+
+🔴 3. Limit steps
+for (int step = 0; step < 5; step++)
+🔴 4. Add timeout + fallback
+🚀 NEXT LEVEL (If you want)
+
+
+ 
