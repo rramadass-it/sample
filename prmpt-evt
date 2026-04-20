@@ -1,0 +1,212 @@
+🚀 Prompt-a-thon 2026
+(Part of AI Premier League 2026)
+🔍 What is Prompt-a-thon?
+
+Prompt-a-thon is a hands-on learning challenge designed to help employees effectively use AI tools like ChatGPT and GitHub Copilot in their daily work.
+
+Participants will learn how to:
+
+Write effective prompts
+Solve real work problems using AI
+Improve productivity across development, testing, analysis, and reporting
+
+👉 This is a beginner-friendly event — no prior AI experience required.
+
+🎯 Objectives
+Enable teams to use AI effectively in daily tasks
+Build foundational skills in prompt engineering
+Identify practical AI use cases across roles
+Create a shared prompt library for the organization
+👥 Who Can Participate?
+
+Open to all roles:
+
+Developers
+Testers / QA
+Business Analysts
+Project / Delivery Managers
+
+Team Size: 3–5 members
+(Cross-functional teams encouraged)
+
+🧩 What is Expected from Participants?
+
+Each team should:
+
+Identify a real work problem
+Use AI tools to solve it using effective prompts
+Create a set of 5–10 high-quality prompts
+Demonstrate:
+Input → AI output
+Improvement in effort or quality
+💡 Sample Use Cases
+👨‍💻 Developers
+Generate unit tests
+Refactor code
+Debug errors
+🧪 Testers
+Generate test cases
+Create test data
+Improve bug reports
+📊 Business Analysts
+Convert requirements to user stories
+Summarize documents
+Create acceptance criteria
+📈 Managers
+Generate status reports
+Identify risks
+Create release notes
+🏆 Evaluation Criteria
+Practical usefulness (real problem solved)
+Prompt quality (clarity and effectiveness)
+Output quality (accuracy and usefulness)
+Impact (time/effort saved)
+🎁 Outcomes
+Best prompts will be added to an internal AI Prompt Library
+Top teams will be recognized and shortlisted for the next stage:
+👉 AI in Action – Real Use Case Hackathon
+📅 Timeline
+Training & Enablement: [Insert Date]
+Submission Deadline: [Insert Date]
+Demo & Evaluation: [Insert Date]
+🚀 Why Participate?
+Learn AI in a practical way
+Improve your daily productivity
+Gain recognition and visibility
+Be part of the organization’s AI journey
+
+--------------------
+
+
+🚀 Prompt-a-thon 2026
+(AI Premier League – Stage 1)
+🔍 What is Prompt-a-thon?
+
+Prompt-a-thon is an individual learning challenge to help employees effectively use AI tools like ChatGPT and GitHub Copilot in their daily work.
+
+Participants will learn how to:
+
+Write effective prompts
+Solve real work problems using AI
+Improve productivity across roles
+
+👉 No prior AI experience required.
+
+🎯 Objectives
+Build prompt engineering skills across the organization
+Encourage practical AI usage in daily work
+Identify high-value AI use cases
+Create an internal prompt library
+👥 Who Can Participate?
+
+Open to all:
+
+Developers
+Testers / QA
+Business Analysts
+Project / Delivery Managers
+
+📌 Individual participation (mandatory submission per person)
+
+🧩 What is Expected?
+
+Each participant must:
+
+Identify a real work-related task/problem
+Use AI to solve it
+Submit:
+5–10 prompts
+AI outputs
+Use case description
+Impact (time/effort saved)
+📩 How to Submit (Important Section)
+
+All participants must submit their entries via:
+
+👉 Microsoft Forms link: [Insert Link]
+
+📌 Submission Guidelines
+Each participant must submit individually
+Minimum 5 prompts required
+Prompts must be:
+Clear and structured
+Relevant to your role
+Solving a real problem
+✍️ Submission Format (Example)
+
+Use Case: Generate unit test cases
+
+Prompt:
+
+Act as a senior QA engineer.
+Generate JUnit test cases for the following Java method including edge cases.
+
+Output:
+[Paste AI output]
+
+Impact:
+Reduced test creation time from 2 hours to 30 minutes
+
+🧾 Microsoft Forms – Fields to Create
+
+Below is the exact structure you should configure in Microsoft Forms.
+
+Section 1: Participant Details
+Name (Text)
+Employee ID (Text)
+Email ID (Text)
+Project Name (Text)
+Role (Choice)
+Developer
+Tester / QA
+Business Analyst
+Manager
+Section 2: Use Case Details
+Use Case Title (Text)
+Problem Statement (Long Text)
+Category (Choice)
+Coding
+Testing
+Documentation
+Requirement Analysis
+Project Management
+Section 3: Prompt Submission
+
+👉 Use repeatable format (or multiple fields)
+
+Option A (Simple – Recommended)
+Prompt 1 (Long Text)
+Output 1 (Long Text)
+Prompt 2 (Long Text)
+Output 2 (Long Text)
+
+👉 Continue till Prompt 5 (minimum)
+
+Option B (Advanced)
+
+Ask participants to upload a file:
+
+Upload File (File Upload)
+(Participants can upload Word/PDF with prompts)
+Section 4: Impact
+What problem did this solve? (Long Text)
+Time/effort saved (Text)
+Any additional comments (Optional)
+🏆 Evaluation Criteria
+Practical usefulness
+Prompt quality
+Output effectiveness
+Measurable impact
+🎁 Outcomes
+Best prompts added to internal repository
+Top participants shortlisted for:
+👉 AI in Action – Hackathon (Stage 2)
+💡 Pro Tips for Participants (Optional Section)
+Be specific in prompts
+Give context
+Ask for structured output
+Iterate and refine
+⚠️ Important Notes
+This is a learning-focused event
+Simple, practical use cases are encouraged
+Focus on real work problems, not theoretical ideas
