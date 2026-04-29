@@ -210,3 +210,484 @@ Iterate and refine
 This is a learning-focused event
 Simple, practical use cases are encouraged
 Focus on real work problems, not theoretical ideas
+====================================================================
+Kick Off V1:
+==========================================
+Good morning everyone,
+
+Let me start with a simple question…
+
+How many of you follow the Indian Premier League?
+
+You know how in IPL, even one good over can completely change the game?
+
+That’s exactly what we’re trying to do here —
+bring that same energy into how we work… using AI.
+
+Welcome to our own version of IPL —
+APL: AI Premier League.
+
+
+
+What is APL?
+
+Think of APL like a full cricket season.
+
+You don’t become a champion in one match
+You build skills, try strategies, learn from failures
+And then deliver match-winning performances
+
+APL is designed the same way —
+to help all of us learn, practice, and apply AI in our daily work
+
+
+APL has two stages.
+
+
+Stage 1: Prompt-a-thon:
+
+This is where we begin.
+
+A beginner-friendly, hands-on challenge where you will learn how to use AI tools effectively by writing better prompts.
+
+The focus here is:
+
+Learning fundamentals
+Understanding how AI responds
+Improving how you interact with it
+
+No complexity. No pressure. Just learning by doing.
+
+
+Stage 2: AI in Action, that will be planned during Q3 2026
+
+This is the next level.
+
+A real use case hackathon where you apply what you’ve learned to:
+
+Build solutions
+Improve productivity
+Solve actual business problems
+
+So Stage 1 is about learning,
+Stage 2 is about impact.
+
+
+What is Prompt-a-thon?
+
+Let’s zoom into Prompt-a-thon.
+
+Let me start with a simple question again,
+“What’s your current way of solving a problem?” 😄
+
+A: Google
+B: Stack Overflow
+C: Ask teammate
+D: Trial & error
+E: All of the above
+
+(“Nice… I’m seeing a lot of ‘E – all of the above’… not surprising 😄
+Some Googles, some Stack Overflow… and yeah, asking teammates never fails.”)
+
+“I’m guessing most of us are ‘all of the above’… that’s exactly how we work today.”
+
+“What if instead of doing all this…
+you could just ask one well-structured question and get a solid answer in seconds?”
+
+👉 That’s where AI comes in.
+
+“Let’s test this —
+Give me a BAD prompt for this task: ‘Summarize a report’”
+
+“😂 These are actually perfect…
+‘Summarize this’, ‘Explain fast’… this is exactly how most of us start.”
+
+
+✅ Better Prompt (Simple & Effective)
+
+Instead of:
+❌ “Summarize this”
+
+Use:
+✅ “Summarize the following text in 5 bullet points, focusing on key insights, risks, and action items. Keep it concise and clear.”
+
+“And the problem is —
+when the prompt is vague, the output is also vague.”
+
+“It’s like asking a teammate:
+‘Hey… do this quickly’ —
+they’ll come back with something… but maybe not what you wanted.”
+
+
+“And that’s exactly what Prompt-a-thon is about.”
+
+“Not learning AI theory…
+but learning how to ask better questions to get better results.”
+
+
+So during this challenge,
+you’ll move from prompts like ‘summarize this’… 
+to prompts that actually give you structured, useful outputs.
+
+
+This is a hands-on learning challenge designed for all of us to start using AI in our daily work.
+
+You’ll learn how to:
+
+Write effective prompts
+Solve real work problems
+Improve productivity across development, testing, analysis, and reporting
+
+And the best part —
+no prior AI experience is needed.
+
+Why This Matters
+
+Here’s the key idea:
+
+AI is powerful, but the output depends on how you ask.
+
+A small improvement in your prompt can:
+
+Save time
+Improve accuracy
+Reduce rework
+
+Just like in cricket,
+sometimes a small change in timing makes the same shot go from a dot ball to a boundary
+
+
+
+Objectives (Team Strategy)
+
+Our goals are simple, Through this initiative, we want to:
+
+Make AI part of your daily workflow
+Build strong prompt engineering skills
+Identify practical use cases across roles
+Create a shared prompt library
+
+So this is not just an event — it’s something that will continue helping everyone.
+
+
+Who Can Participate?
+
+Open to all roles
+No registration needed
+And yes… mandatory participation
+
+Because this is not about a few star players —
+it’s about building a strong team overall.
+
+
+What is Expected from You?
+
+Very simple:
+
+Use AI tools to solve given problems
+Focus on writing clear, effective prompts
+Try to create something useful for your day-to-day work
+
+Don’t overthink it.
+
+Start small. Experiment. Improve
+
+Remember —
+In AI, the prompt is your shot selection.
+
+Bad prompt → bad shot → easy catch.
+Good prompt → perfect timing → boundary.
+
+
+
+Evaluation
+
+Your submissions will be evaluated based on:
+
+Practical usefulness
+Prompt quality
+Output quality
+Overall impact
+
+So focus on real value, not just creativity
+
+So this is not about random experimentation — it’s about playing smart.
+
+
+
+Outcomes
+
+The best prompts will be added to our internal prompt library.
+
+This means your work can:
+
+Help others
+Be reused across teams
+And improve overall productivity
+
+
+Timelines
+Event window: 29th April to 6th May
+Kickoff: 29th April
+Results: 20th May
+
+So you have one week — use it well.
+
+ 
+
+Closing:
+
+Let me end with this…
+
+In cricket, the difference between a good player and a great player is:
+
+Not just talent, But how quickly they adapt and learn
+
+AI is the same.
+
+This APL is your chance to:
+
+Try new things
+Learn fast
+And start working smarter
+
+So step in, take your stance,
+and start playing your shots.
+
+Who knows —
+your prompt might be the one that changes the game for your team.
+
+I encourage everyone to actively participate, explore different ideas, and make the most of this initiative.
+
+Thank you — and looking forward to seeing your innovative prompts!
+
+Thank you… and all the best! 
+
+It’s not about playing harder — it’s about playing smarter
+
+
+================================================
+Kick off V2:
+==================================
+Good morning everyone,
+
+Let me start with a simple question…
+
+How many of you follow the Indian Premier League?
+
+You know how in IPL, even one good over can completely change the game?
+
+That’s exactly what we’re trying to do here —
+bring that same energy into how we work… using AI.
+
+Welcome to our own version of IPL —
+APL: AI Premier League.
+
+What is APL?
+
+Think of APL like a full cricket season.
+
+You don’t become a champion in one match.
+You build skills, try strategies, learn from failures…
+and then deliver match-winning performances.
+
+APL is designed the same way —
+to help all of us learn, practice, and apply AI in our daily work.
+
+APL has two stages
+
+Stage 1: Prompt-a-thon
+
+This is where we begin.
+
+A beginner-friendly, hands-on challenge where you’ll learn how to use AI tools effectively by writing better prompts.
+
+The focus is simple:
+
+Learning fundamentals
+Understanding how AI responds
+Improving how you interact with it
+
+No complexity. No pressure. Just learning by doing.
+
+Stage 2: AI in Action (Q3 2026)
+
+This is the next level.
+
+A real use case hackathon where you apply what you’ve learned to:
+
+Build solutions
+Improve productivity
+Solve real business problems
+
+So Stage 1 is about learning,
+Stage 2 is about impact.
+
+What is Prompt-a-thon?
+
+Let’s zoom into Prompt-a-thon.
+
+Let me ask you something…
+
+“What’s your current way of solving a problem?” 😄
+
+A: Google
+B: Stack Overflow
+C: Ask teammate
+D: Trial & error
+E: All of the above
+
+(Pause 10–15 seconds)
+
+Nice… I’m seeing a lot of “E — all of the above”… not surprising 😄
+Some Googles, some Stack Overflow… and asking teammates never fails.
+
+Honestly, most of us are “all of the above” —
+that’s how we work today.
+
+But what if… instead of doing all this,
+you could just ask one well-structured question
+and get a solid answer in seconds?
+
+👉 That’s where AI comes in.
+
+Now let’s try something fun…
+
+Give me a BAD prompt for this task: “Summarize a report.”
+
+(Pause, react to answers)
+
+😂 These are actually perfect…
+“Summarize this”, “Explain fast”… this is exactly how most of us start.
+
+Now look at this:
+
+Instead of:
+❌ “Summarize this”
+
+Try:
+✅ “Summarize the following text in 5 bullet points, focusing on key insights, risks, and action items. Keep it concise and clear.”
+
+And here’s the key point:
+
+When the prompt is vague, the output is also vague.
+
+It’s like telling a teammate,
+“Hey… do this quickly” —
+you’ll get something… but maybe not what you expected.
+
+And that’s exactly what Prompt-a-thon is about.
+
+Not learning AI theory…
+but learning how to ask better questions to get better results.
+
+So during this challenge,
+you’ll move from prompts like “summarize this”…
+to prompts that actually give structured, useful outputs.
+
+Why This Matters
+
+AI is powerful — but the output depends on how you ask.
+
+A small improvement in your prompt can:
+
+Save time
+Improve accuracy
+Reduce rework
+
+Just like in cricket,
+a small change in timing can turn a dot ball into a boundary.
+
+Objectives
+
+Through this initiative, we want to:
+
+Make AI part of your daily workflow
+Build strong prompt engineering skills
+Identify practical use cases across roles
+Create a shared prompt library
+
+So this is not just an event —
+it’s something that will continue helping everyone.
+
+Who Can Participate?
+Open to all roles
+No registration required
+Mandatory for everyone
+
+Because this is not about a few star players —
+it’s about building a strong team overall.
+
+What is Expected from You?
+
+Very simple:
+
+Use AI tools to solve problems
+Focus on writing clear, effective prompts
+Create something useful for your daily work
+
+Don’t overthink it.
+
+Start small. Experiment. Improve.
+
+And remember —
+
+In AI, the prompt is your shot selection.
+
+Bad prompt → bad shot → easy catch
+Good prompt → perfect timing → boundary
+
+Evaluation
+
+Submissions will be evaluated based on:
+
+Practical usefulness
+Prompt quality
+Output quality
+Overall impact
+
+So focus on real value, not just creativity.
+
+Outcomes
+
+The best prompts will be added to our internal prompt library.
+
+Which means your work can:
+
+Help others
+Be reused across teams
+And improve overall productivity
+Timelines
+Event window: 29th April to 6th May
+Kickoff: 29th April
+Results: 20th May
+
+So you have one week — use it well.
+
+Closing
+
+Let me end with this…
+
+In cricket, the difference between a good player and a great player is not just talent —
+it’s how quickly they adapt and learn.
+
+AI is the same.
+
+This APL is your chance to:
+
+Try new things
+Learn fast
+And start working smarter
+
+So step in, take your stance,
+and start playing your shots.
+
+Who knows —
+your prompt might be the one that changes the game for your team.
+
+Thank you… and looking forward to seeing your innovative prompts.
+
+ 
+
+
+
